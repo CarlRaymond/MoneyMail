@@ -26,20 +26,67 @@
     <div id="map" class="map"></div>
 
     <script>
-        let LMN = L.latLng(42.70360, -84.53748);
+    let LMN = L.latLng(42.70360, -84.53748);
 
-        let mapOptions = {
-            zoomSnap: 0.5,
-            //renderer: L.canvas(),
-            center: LMN,
-            zoom: 16
+    let mapOptions = {
+        zoomSnap: 0.5,
+        //renderer: L.canvas(),
+        center: LMN,
+        zoom: 16
+    };
+
+    // Create the map
+    var map = L.map("map", mapOptions);
+
+    // Histogram bins for grouping and summarizing
+    let histogram = [
+        { minValue: 80000, color:'#800026', group: L.layerGroup(), residences: 0, businesses: 0 },
+        { minValue: 70000, color:'#BD0026', group: L.layerGroup(), residences: 0, businesses: 0 },
+        { minValue: 60000, color:'#E31A1C', group: L.layerGroup(), residences: 0, businesses: 0 },
+        { minValue: 50000, color:'#FC4E2A', group: L.layerGroup(), residences: 0, businesses: 0 },
+        { minValue: 40000, color:'#FD8D3C', group: L.layerGroup(), residences: 0, businesses: 0 },
+        { minValue: 30000, color:'#FEB24C', group: L.layerGroup(), residences: 0, businesses: 0 },
+        { minValue: 20000, color:'#FED976', group: L.layerGroup(), residences: 0, businesses: 0 },
+        { minValue: 0, color:'#FFEDA0', group: L.layerGroup(), residences: 0, businesses: 0 },
+    ];
+
+    function getColor(m) {
+        for (bin of histogram) {
+            if (m >= bin.minValue) return bin.color;
+        }
+    }
+
+    function style(feature) {
+        return {
+            color: getColor(feature.properties.MED_INCOME),
+            weight: 4,
+            opacity: 1,
         };
+    }
 
-        // Create the map
-        var map = L.map("map", mapOptions);
+    function featureDetail(feature, layer) {
+        let m = feature.properties.MED_INCOME;
+        let tip = `\$${m.toLocaleString('en-US')}`;
+        layer.bindTooltip(tip, { permanent: true, direction: 'top' }).openTooltip();
+        let p = feature.properties;
+        let l = 'en-US';
+        let popup = `<h3>${p.ZIP_CRID}</h3><table><tr><th>Med. Income</th><td align='right'>\$${p.MED_INCOME.toLocaleString(l)}<tr><th>Residences</th><td align='right'>${p.RES_CNT.toLocaleString(l)}</td></tr><tr><th>Businesses</th><td align='right'>${p.BUS_CNT.toLocaleString(l)}</td></tr><tr><th>Facility</th><td align='right'>${p.FACILITY_NAME}<tr></table>`;
+        layer.bindPopup(popup);
 
-        // Add layers
-        let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        // Add layer to group for histogram bin
+        for (bin of histogram) {
+            if (m >= bin.minValue) {
+                bin.residences += feature.properties.RES_CNT;
+                bin.businesses += feature.properties.BUS_CNT;
+                bin.group.addLayer(layer);
+                break;
+            }
+        }
+    };
+
+
+    // Add layers
+    let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
     L.tileLayer(osmUrl, {
@@ -57,42 +104,49 @@
     }).addTo(map);
 
     let zips = [ 48910, 48911, 48933, 48824, 48912, 48825, 48915, 48842, 48917, 48823, 48906, 48864, 48821, 48840, 48854, 48808, 48820, 48876, 48837, 48895, 48848, 48822, 48827, 48819, 49251, 48872, 48813, 49264, 48892 ];
-    let routeUrls = zips.map(z => `/data/routes-${z}.geojson`);
 
-    function getColor(m) {
-    return m > 80000 ? '#800026' :
-           m > 70000 ? '#BD0026' :
-           m > 60000 ? '#E31A1C' :
-           m > 50000 ? '#FC4E2A' :
-           m > 40000 ? '#FD8D3C' :
-           m > 30000 ? '#FEB24C' :
-           m > 20000 ? '#FED976' :
-                       '#FFEDA0';
-    }
+    // Load ZIP data
+    let requests = [];
 
-    function style(feature) {
-        return {
-            color: getColor(feature.properties.MED_INCOME),
-            weight: 4,
-            opacity: 1,
-        };
-    }
+    zips.forEach ((zip) => {
+        url = `/data/routes-${zip}.geojson`;
+        let featuresRequest = fetch(url);
 
-    function featureDetail(feature, layer) {
-        let content = `${feature.properties.ZIP_CRID} Med. income: \$${feature.properties.MED_INCOME}`;
-        
-    };
+        requests.push(
+            featuresRequest.then((response) => response.json()).then(data => {
+            L.geoJSON(data, { style: style, onEachFeature: featureDetail });
 
-    routeUrls.forEach ((url) => {
-        let featuresRequest = fetch(url)
-            .then((response) => response.json())
-            .catch((error) => {
+            // Add histgram layer groups to map
+            for (bin of histogram) {
+                bin.group.addTo(map);
+            }
+
+        })
+        .catch((error) => {
             console.error(`There was a problem fetching or processing map data for ${url} : `, error);
-        });
+        }));
 
-        featuresRequest.then(data => {
-            L.geoJSON(data, { style: style, onEachFeature: featureDetail }).addTo(map);
-        });
+    });
+
+    // When all features loaded, build a legend
+    Promise.all(requests).then(function () {
+        // Create legend
+        var legend = L.control({ position: "bottomleft" });
+
+        legend.onAdd = function(map) {
+            var div = L.DomUtil.create("div", "legend");
+            let markup = "<h4>Legend</h4>";
+            markup += "<table><tr><th>Income</th><th align='right'>Res.</th><th align='right'>Bus.</th></tr>";
+            for (bin of histogram) {
+                markup += `<tr><td align='right'><i style="background: ${bin.color}"></i><span>\$${bin.minValue.toLocaleString('en-US')}+</td><td align='right'>${bin.residences.toLocaleString('en-US')}</td><td align='right'>${bin.businesses.toLocaleString('en-US')}</td></tr>`;
+            }
+            markup += "</table>";
+
+            div.innerHTML += markup;
+            return div;
+        };
+
+        legend.addTo(map);
     });
 
     </script>
