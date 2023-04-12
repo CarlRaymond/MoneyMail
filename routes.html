@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Carrier Routes Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+    <link rel="stylesheet" href="/map.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+    <script src="/leaflet/vendor/Leaflet.fullscreen/Leaflet.fullscreen.js"></script>
+    <script src="/leaflet/controls/L.Control.Fullscreen.PreserveBounds/L.Control.Fullscreen.PreserveBounds.js"></script>
+    <script src="/leaflet/controls/L.Control.TemplateButton/L.Control.TemplateButton.js"></script>
+    <script src="/leaflet/controls/L.Marker.Classed/L.Marker.Classed.js"></script>
+
+    <!-- Template for Reset View control -->
+    <script type="text/html" id="ResetButtonTemplate">
+        <div class="leaflet-control-templatebutton leaflet-bar leaflet-control">
+            <a class="leaflet-bar-part leaflet-bar-part-single montserrat" title="Reset map to original view" href="#" role="button">
+                <span class="leaflet-control-templatebutton-icon fa fa-undo" aria-hidden="true"></span>
+            </a>
+        </div>
+    </script>
+
+</head>
+<body>
+    <meta name="viewport" content="width=device-width" />
+    <div id="map" class="map"></div>
+
+    <script>
+        let LMN = L.latLng(42.70360, -84.53748);
+
+        let mapOptions = {
+            zoomSnap: 0.5,
+            //renderer: L.canvas(),
+            center: LMN,
+            zoom: 16
+        };
+
+        // Create the map
+        var map = L.map("map", mapOptions);
+
+        // Add layers
+        let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+    L.tileLayer(osmUrl, {
+        maxZoom: 18,
+        minZoom: 1,
+        attribution: osmAttribution
+    }).addTo(map);
+
+    L.control.fullscreen({
+        position: "topleft"
+    }).addTo(map);
+
+    L.control.scale({
+        position: "bottomright"
+    }).addTo(map);
+
+    let zips = [ 48910, 48911, 48933, 48824, 48912, 48825, 48915, 48842, 48917, 48823, 48906, 48864, 48821, 48840, 48854, 48808, 48820, 48876, 48837, 48895, 48848, 48822, 48827, 48819, 49251, 48872, 48813, 49264, 48892 ];
+    let routeUrls = zips.map(z => `/data/routes-${z}.geojson`);
+
+    function getColor(m) {
+    return m > 80000 ? '#800026' :
+           m > 70000 ? '#BD0026' :
+           m > 60000 ? '#E31A1C' :
+           m > 50000 ? '#FC4E2A' :
+           m > 40000 ? '#FD8D3C' :
+           m > 30000 ? '#FEB24C' :
+           m > 20000 ? '#FED976' :
+                       '#FFEDA0';
+    }
+
+    function style(feature) {
+        return {
+            color: getColor(feature.properties.MED_INCOME),
+            weight: 4,
+            opacity: 1,
+        };
+    }
+
+    function featureDetail(feature, layer) {
+        let content = `${feature.properties.ZIP_CRID} Med. income: \$${feature.properties.MED_INCOME}`;
+        
+    };
+
+    routeUrls.forEach ((url) => {
+        let featuresRequest = fetch(url)
+            .then((response) => response.json())
+            .catch((error) => {
+            console.error(`There was a problem fetching or processing map data for ${url} : `, error);
+        });
+
+        featuresRequest.then(data => {
+            L.geoJSON(data, { style: style, onEachFeature: featureDetail }).addTo(map);
+        });
+    });
+
+    </script>
+
+</body>
+</html>

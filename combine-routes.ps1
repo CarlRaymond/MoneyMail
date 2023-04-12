@@ -1,0 +1,1 @@
+jq -n -f .\data\combine-geojson.jq .\data\routes-*.geojson > .\data\routes.geojson

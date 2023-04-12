@@ -1,0 +1,14 @@
+﻿
+//Bug fix to allow icon inside <i > in .leaflet-bar
+//.leaflet-bar a i.leaflet-control-templatebutton-icon { line-height: inherit; }
+
+.leaflet-bar.leaflet-control-templatebutton a {  }
+
+//Font-size
+$font-size: 1.3333em;
+.leaflet-control-templatebutton a { font-size: $font-size; cursor: pointer;
+    .leaflet-touch & {
+        //26 = default leaflet button dim, 30 = dim with leaflet-touch
+        font-size: $font-size * 30 / 26;
+    }
+}
