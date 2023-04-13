@@ -7,10 +7,11 @@
     <link rel="stylesheet" href="/map.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
     <script src="/leaflet/vendor/Leaflet.fullscreen/Leaflet.fullscreen.js"></script>
-    <script src="/leaflet/controls/L.Control.Fullscreen.PreserveBounds/L.Control.Fullscreen.PreserveBounds.js"></script>
+    <script src="/leaflet/vendor/Leaflet.TextPath/leaflet.textpath.js"></script>
+    <script src="/leaflet/vendor/Leaflet.fullscreen/Leaflet.fullscreen.min.js"></script>
     <script src="/leaflet/controls/L.Control.TemplateButton/L.Control.TemplateButton.js"></script>
     <script src="/leaflet/controls/L.Marker.Classed/L.Marker.Classed.js"></script>
-
+    <script src="/leaflet/L.SVG.groupedPaths.js"></script>
     <!-- Template for Reset View control -->
     <script type="text/html" id="ResetButtonTemplate">
         <div class="leaflet-control-templatebutton leaflet-bar leaflet-control">
@@ -26,13 +27,12 @@
     <div id="map" class="map"></div>
 
     <script>
-    let LMN = L.latLng(42.70360, -84.53748);
-
+    let locale = 'en-US';
+    let LMN = L.latLng(42.703772, -84.537131);
     let mapOptions = {
         zoomSnap: 0.5,
-        //renderer: L.canvas(),
         center: LMN,
-        zoom: 16
+        zoom: 12
     };
 
     // Create the map
@@ -59,21 +59,24 @@
     function style(feature) {
         return {
             color: getColor(feature.properties.MED_INCOME),
-            weight: 4,
+            weight: 6,
             opacity: 1,
+            className: "carrier-route"
         };
     }
 
     function featureDetail(feature, layer) {
-        let m = feature.properties.MED_INCOME;
-        let tip = `\$${m.toLocaleString('en-US')}`;
-        layer.bindTooltip(tip, { permanent: true, direction: 'top' }).openTooltip();
-        let p = feature.properties;
-        let l = 'en-US';
-        let popup = `<h3>${p.ZIP_CRID}</h3><table><tr><th>Med. Income</th><td align='right'>\$${p.MED_INCOME.toLocaleString(l)}<tr><th>Residences</th><td align='right'>${p.RES_CNT.toLocaleString(l)}</td></tr><tr><th>Businesses</th><td align='right'>${p.BUS_CNT.toLocaleString(l)}</td></tr><tr><th>Facility</th><td align='right'>${p.FACILITY_NAME}<tr></table>`;
-        layer.bindPopup(popup);
+        let props = feature.properties;
+        let m = props.MED_INCOME;
+        
+        //let tip = `\$${m.toLocaleString(locale)}`;
+        let tip = `<h3>${props.ZIP_CRID}</h3><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(locale)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(locale)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(locale)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
 
-        // Add layer to group for histogram bin
+        layer.options.containerName = "carrier-routes";
+        layer.bindTooltip(tip, { permanent: false, sticky: true, direction: 'top' });//.openTooltip();
+       // layer.bindPopup(popup);
+
+        // Add layers to group for histogram bin
         for (bin of histogram) {
             if (m >= bin.minValue) {
                 bin.residences += feature.properties.RES_CNT;
@@ -85,14 +88,44 @@
     };
 
 
-    // Add layers
-    let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-    L.tileLayer(osmUrl, {
-        maxZoom: 18,
-        minZoom: 1,
-        attribution: osmAttribution
+    // Add layers
+    // let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    // let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+    // L.tileLayer(osmUrl, {
+    //     maxZoom: 18,
+    //     minZoom: 1,
+    //     attribution: osmAttribution
+    // }).addTo(map);
+
+    map.createPane('labels');
+    map.getPane('labels').style.zIndex = 550;
+    map.getPane('labels').style.pointerEvents = 'none';
+
+    // var CartoDB_PositronNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+	// attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+	// subdomains: 'abcd',
+	// maxZoom: 20
+    // }).addTo(map);
+
+    // var CartoDB_PositronOnlyLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+	// attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+	// subdomains: 'abcd',
+    // pane: 'labels',
+	// maxZoom: 20
+    // }).addTo(map);
+
+    var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
+
+    var CartoDB_VoyagerOnlyLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        pane: 'labels',
+        maxZoom: 20
     }).addTo(map);
 
     L.control.fullscreen({
@@ -103,42 +136,67 @@
         position: "bottomright"
     }).addTo(map);
 
-    let zips = [ 48910, 48911, 48933, 48824, 48912, 48825, 48915, 48842, 48917, 48823, 48906, 48864, 48821, 48840, 48854, 48808, 48820, 48876, 48837, 48895, 48848, 48822, 48827, 48819, 49251, 48872, 48813, 49264, 48892 ];
+    let lmnMarker = L.marker(LMN, { title: "LMN Headquarters" }).addTo(map);
 
-    // Load ZIP data
+    let circles = [
+        { miles: 20, color: '#afa5e8' },
+        { miles: 10, color: '#c0b5ff'},
+        { miles: 5, color: '#e9e6ff' },
+        { miles: 2, color: '#edc4ff' },
+        { miles: 1, color: '#e3a3ff' },
+    ];
+    for (c of circles) {
+        let tip = `${c.miles}-mile radius`;
+        L.circle(LMN, c.miles * 1609, { containerName: 'distance-circles', className: 'distance-circle', color: '#333333', fillColor: c.color, fillOpacity: 0, opacity: 0.5, stroke: true, width: 2, dashArray: "1 5"})
+        //.bindTooltip(tip, { sticky: true })
+        //.setText(tip, { repeat: true })
+        .addTo(map);
+    }
+
+    // Add layers control to select histogram bins
+    let layerControl = L.control.layers(null, null, { collapsed: false, position: 'bottomright' });
+    histogram.map(bin => {
+        layerControl.addOverlay(bin.group, `\$${bin.minValue.toLocaleString(locale)}`);
+    });
+    layerControl.addTo(map);
+
+    let zips = [ 48910, 48911, 48933, 48824, 48912, 48825, 48915, 48842, 48917, 48823, 48906, 48864, 48821, 48840, 48854, 48808, 48820, 48876, 48837, 48895, 48848, 48822, 48827, 48819, 49251, 48872, 48813, 49264, 48892, 48894, 48879, 48875 ];
+
+    // Tracks data loading requests
     let requests = [];
 
     zips.forEach ((zip) => {
         url = `/data/routes-${zip}.geojson`;
-        let featuresRequest = fetch(url);
 
         requests.push(
-            featuresRequest.then((response) => response.json()).then(data => {
-            L.geoJSON(data, { style: style, onEachFeature: featureDetail });
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                L.geoJSON(data, { style: style, onEachFeature: featureDetail });
 
-            // Add histgram layer groups to map
-            for (bin of histogram) {
-                bin.group.addTo(map);
-            }
+                // Add histgram layer groups to map
+                for (bin of histogram) {
+                    bin.group.addTo(map);
+                }
 
-        })
-        .catch((error) => {
-            console.error(`There was a problem fetching or processing map data for ${url} : `, error);
-        }));
+            })
+            .catch((error) => {
+                console.error(`There was a problem fetching or processing map data for ${url} : `, error);
+            }));
 
     });
 
-    // When all features loaded, build a legend
+    // When all features processed, build a legend
     Promise.all(requests).then(function () {
         // Create legend
         var legend = L.control({ position: "bottomleft" });
 
         legend.onAdd = function(map) {
-            var div = L.DomUtil.create("div", "legend");
+            var div = L.DomUtil.create("div", "legend leaflet-control");
             let markup = "<h4>Legend</h4>";
             markup += "<table><tr><th>Income</th><th align='right'>Res.</th><th align='right'>Bus.</th></tr>";
             for (bin of histogram) {
-                markup += `<tr><td align='right'><i style="background: ${bin.color}"></i><span>\$${bin.minValue.toLocaleString('en-US')}+</td><td align='right'>${bin.residences.toLocaleString('en-US')}</td><td align='right'>${bin.businesses.toLocaleString('en-US')}</td></tr>`;
+                markup += `<tr><td align='right'><i style="background: ${bin.color}"></i><span>\$${bin.minValue.toLocaleString(locale)}+</td><td align='right'>${bin.residences.toLocaleString(locale)}</td><td align='right'>${bin.businesses.toLocaleString(locale)}</td></tr>`;
             }
             markup += "</table>";
 
