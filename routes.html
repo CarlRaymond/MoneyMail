@@ -40,13 +40,13 @@
 
     // Histogram bins for grouping and summarizing
     let histogram = [
-        { minValue: 80000, color:'#800026', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 70000, color:'#BD0026', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 60000, color:'#E31A1C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 50000, color:'#FC4E2A', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 40000, color:'#FD8D3C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 30000, color:'#FEB24C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 20000, color:'#FED976', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 115000, color:'#800026', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 100000, color:'#BD0026', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 85000, color:'#E31A1C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 70000, color:'#FC4E2A', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 55000, color:'#FD8D3C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 40000, color:'#FEB24C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 25000, color:'#FED976', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
         { minValue: 0, color:'#FFEDA0', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
     ];
 
@@ -59,7 +59,7 @@
     function style(feature) {
         return {
             color: getColor(feature.properties.MED_INCOME),
-            weight: 6,
+            weight: 5,
             opacity: 1,
             className: "carrier-route"
         };
@@ -69,12 +69,10 @@
         let props = feature.properties;
         let m = props.MED_INCOME;
         
-        //let tip = `\$${m.toLocaleString(locale)}`;
         let tip = `<h3>${props.ZIP_CRID}</h3><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(locale)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(locale)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(locale)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
 
         layer.options.containerName = "carrier-routes";
         layer.bindTooltip(tip, { permanent: false, sticky: true, direction: 'top' });//.openTooltip();
-       // layer.bindPopup(popup);
 
         // Add layers to group for histogram bin
         for (bin of histogram) {
@@ -86,9 +84,20 @@
                 break;
             }
         }
+
+        layer.on('click', featureClick);
     };
 
+    let selectedFeature = null;
 
+    let featureClick = function(e) {
+        if (selectedFeature) {
+            L.geoJSON().resetStyle(selectedFeature);
+        }
+        selectedFeature = e.target;
+        selectedFeature.bringToFront();
+        selectedFeature.setStyle({ className: 'carrier-route-selected', color: 'blue'});
+    }
 
     // Add layers
     // let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
