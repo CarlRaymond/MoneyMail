@@ -186,7 +186,13 @@
                       width: 5,
                       dashArray: "1 3" 
                 }});
-                layer.bindTooltip(`${iso.minutes}-minute driving distance`, { permanent: false, sticky: true });
+                layer.bindTooltip(`${iso.minutes}-minute driving distance`, { permanent: false, sticky: true, direction: 'center' });
+                // layer.on('mouseover', function() {
+                //     this.setText(`${iso.minutes} min.           `, {repeat: true, attributes: {fill: 'red'},size: "3rem", offset: 10, below: true });
+                // });
+                // layer.on('mouseout', function() {
+                //     this.setText(null);
+                // });
                 isochronesGroup.addLayer(layer);
             })
             .catch((error) => {
