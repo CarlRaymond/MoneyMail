@@ -36,6 +36,13 @@ body { width: 100%;  height: 100vh; }
   
   .carrier-routes:has(:hover) .carrier-route { opacity: 0.1; }
   .carrier-routes:has(:hover) .carrier-route:hover { opacity: 1; }
-  .carrier-route { opacity: 0.5; }
+  .carrier-route { opacity: 0.25; }
   .carrier-route:hover { opacity: 1; }
   .distance-circle:hover { color: black; }
+
+  .leaflet-tooltip.distance-circle {
+    font-size: smaller;
+    padding: 0 0.5em 0 0.5em;
+    border-radius: 9px;
+    background-color: palegoldenrod;
+  }

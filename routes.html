@@ -12,6 +12,7 @@
     <script src="/leaflet/controls/L.Control.TemplateButton/L.Control.TemplateButton.js"></script>
     <script src="/leaflet/controls/L.Marker.Classed/L.Marker.Classed.js"></script>
     <script src="/leaflet/L.SVG.groupedPaths.js"></script>
+    <script src="/leaflet/L.TipCircle.js"></script>
     <!-- Template for Reset View control -->
     <script type="text/html" id="ResetButtonTemplate">
         <div class="leaflet-control-templatebutton leaflet-bar leaflet-control">
@@ -107,13 +108,13 @@
     }
 
     // Add layers
-    // let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    // let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-    // L.tileLayer(osmUrl, {
-    //     maxZoom: 18,
-    //     minZoom: 1,
-    //     attribution: osmAttribution
-    // }).addTo(map);
+    let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+    L.tileLayer(osmUrl, {
+        maxZoom: 18,
+        minZoom: 1,
+        attribution: osmAttribution
+    }).addTo(map);
 
     // var CartoDB_PositronNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
 	// attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -128,18 +129,18 @@
 	// maxZoom: 20
     // }).addTo(map);
 
-    var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
-    }).addTo(map);
+    // var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+    //     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    //     subdomains: 'abcd',
+    //     maxZoom: 20
+    // }).addTo(map);
 
-    var CartoDB_VoyagerOnlyLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        pane: 'labels',
-        maxZoom: 20
-    }).addTo(map);
+    // var CartoDB_VoyagerOnlyLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+    //     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    //     subdomains: 'abcd',
+    //     pane: 'labels',
+    //     maxZoom: 20
+    // }).addTo(map);
 
     L.control.fullscreen({
         position: "topleft"
@@ -152,19 +153,26 @@
     let lmnMarker = L.marker(LMN, { title: "LMN Headquarters" }).addTo(map);
 
     let circles = [
-        { miles: 20, color: '#afa5e8' },
-        { miles: 10, color: '#c0b5ff'},
-        { miles: 5, color: '#e9e6ff' },
-        { miles: 2, color: '#edc4ff' },
-        { miles: 1, color: '#e3a3ff' },
+        { miles: 20, color: '#afa5e8', minRadius: 9 },
+        { miles: 10, color: '#c0b5ff', minRadius: 10 },
+        { miles: 5, color: '#e9e6ff', minRadius: 10 },
+        { miles: 2, color: '#edc4ff', minRadius: 11 },
+        { miles: 1, color: '#e3a3ff', minRadius: 12 },
     ];
+    let circleGroup = L.layerGroup();
     for (c of circles) {
-        let tip = `${c.miles}-mile radius`;
-        L.circle(LMN, c.miles * 1609, { containerName: 'distance-circles', className: 'distance-circle', color: '#333333', fillColor: c.color, fillOpacity: 0, opacity: 0.5, stroke: true, width: 2, dashArray: "1 5"})
-        //.bindTooltip(tip, { sticky: true })
-        //.setText(tip, { repeat: true })
-        .addTo(map);
+        let layer = L.tipCircle(LMN, c.miles * 1609, {
+            containerName: 'distance-circles',
+            className: 'distance-circle',
+            tipText: `${c.miles}-mile radius`,
+            minZoom: c.minRadius,
+            color: '#333333',
+            //fillColor: c.color,
+            fillOpacity: 0, opacity: 0.5, stroke: true, width: 2, dashArray: "1 5"}
+        );
+        circleGroup.addLayer(layer);
     }
+    circleGroup.addTo(map);
 
     let isochrones = [
         { minutes: 10, color: '#222266'},
@@ -172,33 +180,28 @@
         { minutes: 30, color: '#226622'},
     ];
     let isochronesGroup = L.layerGroup();
+
+    // Renders isochrone layer with given options
+    let isoHandler = function(options, data) {
+        let layer = L.geoJSON(data, { style:
+            { containerName: 'isochrones',
+                color: options.color,
+                opacity: 0.75,
+                fillOpacity: 0.05,
+                width: 1,
+                dashArray: '6 6',
+                lineCap: 'butt'
+        }});
+        layer.bindTooltip(`${options.minutes}-minute driving distance`, { permanent: false, sticky: true, direction: 'center' });
+        isochronesGroup.addLayer(layer);
+    }
+
     for (iso of isochrones) {
         url = `/data/isochrone-${iso.minutes}min.geojson`;
-        requests.push(
-            fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                let layer = L.geoJSON(data, { style:
-                    { containerName: 'isochrones',
-                      color: iso.color,
-                      opacity: 0.75,
-                      fillOpacity: 0.05,
-                      width: 5,
-                      dashArray: "1 3" 
-                }});
-                layer.bindTooltip(`${iso.minutes}-minute driving distance`, { permanent: false, sticky: true, direction: 'center' });
-                // layer.on('mouseover', function() {
-                //     this.setText(`${iso.minutes} min.           `, {repeat: true, attributes: {fill: 'red'},size: "3rem", offset: 10, below: true });
-                // });
-                // layer.on('mouseout', function() {
-                //     this.setText(null);
-                // });
-                isochronesGroup.addLayer(layer);
-            })
-            .catch((error) => {
-                    console.error(`There was a problem fetching or processing map data for ${url} : `, error);
-            })
-        );
+        fetch(url)
+        .then(response => response.json())
+        .then(isoHandler.bind(this, iso)) // Invoke isoHandler with this bound to this and options bound to iso.
+        .catch((error) => { console.error(`There was a problem fetching or processing map data for ${url} : `, error);  })
     }
     isochronesGroup.addTo(map);
 
