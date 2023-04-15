@@ -43,6 +43,8 @@
     map.getPane('labels').style.zIndex = 550;
     map.getPane('labels').style.pointerEvents = 'none';
 
+    map.createPane('underlay').style.zIndex=390;
+
     // Tracks data loading requests
     let requests = [];
 
@@ -64,38 +66,6 @@
         }
     }
 
-    function style(feature) {
-        return {
-            color: getColor(feature.properties.MED_INCOME),
-            weight: 5,
-            opacity: 1,
-            className: "carrier-route"
-        };
-    }
-
-    function featureDetail(feature, layer) {
-        let props = feature.properties;
-        let m = props.MED_INCOME;
-        
-        let tip = `<h3>${props.ZIP_CRID}</h3><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(locale)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(locale)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(locale)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
-
-        layer.options.containerName = "carrier-routes";
-        layer.bindTooltip(tip, { permanent: false, sticky: true, direction: 'top' });//.openTooltip();
-
-        // Add layers to group for histogram bin
-        for (bin of histogram) {
-            if (m >= bin.minValue) {
-                bin.residences += feature.properties.RES_CNT;
-                bin.businesses += feature.properties.BUS_CNT;
-                bin.routes += 1;
-                bin.group.addLayer(layer);
-                break;
-            }
-        }
-
-        layer.on('click', featureClick);
-    };
-
     let selectedFeature = null;
 
     let featureClick = function(e) {
@@ -108,13 +78,13 @@
     }
 
     // Add layers
-    let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-    L.tileLayer(osmUrl, {
-        maxZoom: 18,
-        minZoom: 1,
-        attribution: osmAttribution
-    }).addTo(map);
+    // let osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    // let osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+    // L.tileLayer(osmUrl, {
+    //     maxZoom: 18,
+    //     minZoom: 1,
+    //     attribution: osmAttribution
+    // }).addTo(map);
 
     // var CartoDB_PositronNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
 	// attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -129,18 +99,18 @@
 	// maxZoom: 20
     // }).addTo(map);
 
-    // var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-    //     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    //     subdomains: 'abcd',
-    //     maxZoom: 20
-    // }).addTo(map);
+    var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+    }).addTo(map);
 
-    // var CartoDB_VoyagerOnlyLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-    //     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    //     subdomains: 'abcd',
-    //     pane: 'labels',
-    //     maxZoom: 20
-    // }).addTo(map);
+    var CartoDB_VoyagerOnlyLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        pane: 'labels',
+        maxZoom: 20
+    }).addTo(map);
 
     L.control.fullscreen({
         position: "topleft"
@@ -213,6 +183,52 @@
     layerControl.addOverlay(isochronesGroup, 'Isochrones');
     layerControl.addTo(map);
 
+
+    function styleRoute(feature) {
+        return {
+            color: getColor(feature.properties.MED_INCOME),
+            weight: 3,
+            opacity: 1,
+            className: "carrier-route"
+        };
+    }
+
+    function styleRouteBackground(feature) {
+        return {
+            color: '#fff',
+            weight: 6,
+            className: `route-facility-${feature.properties.FACILITY_NAME}`
+        }
+    }
+
+    function processRoute(feature, layer) {
+        let props = feature.properties;
+        let m = props.MED_INCOME;
+        
+        let tip = `<h3>${props.ZIP_CRID}</h3><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(locale)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(locale)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(locale)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
+
+        layer.options.containerName = "carrier-routes";
+        layer.bindTooltip(tip, { className: 'carrier-route', permanent: false, sticky: true, direction: 'top', offset: L.point(0, -40) });
+
+        // Add layers to group for histogram bin
+        for (bin of histogram) {
+            if (m >= bin.minValue) {
+                bin.residences += feature.properties.RES_CNT;
+                bin.businesses += feature.properties.BUS_CNT;
+                bin.routes += 1;
+                bin.group.addLayer(layer);
+                break;
+            }
+        }
+
+        layer.on('click', featureClick);
+    };
+
+    function processRouteBackground(feature, layer) {
+        layer.addTo(map);
+    }
+
+
     let zips = [ 48910, 48911, 48933, 48912, 48915, 48842, 48917, 48823, 48906, 48864, 48821, 48840, 48854, 48808, 48820, 48876, 48837, 48895, 48848, 48822, 48827, 48819, 49251, 48872, 48813, 49264, 48892, 48894, 48879, 48875 ];
 
     zips.forEach ((zip) => {
@@ -222,19 +238,17 @@
             fetch(url)
             .then(response => response.json())
             .then(data => {
-                L.geoJSON(data, { style: style, onEachFeature: featureDetail });
-
-                // Add histgram layer groups to map
-                for (bin of histogram) {
-                    bin.group.addTo(map);
-                }
-
+                L.geoJSON(data, { style: styleRoute, onEachFeature: processRoute });
             })
             .catch((error) => {
                 console.error(`There was a problem fetching or processing map data for ${url} : `, error);
             }));
-
     });
+
+    // Add histgram layer groups to map
+    for (bin of histogram) {
+        bin.group.addTo(map);
+    }
 
     // When all features processed, build a legend
     Promise.all(requests).then(function () {
