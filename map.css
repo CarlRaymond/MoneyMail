@@ -40,14 +40,24 @@ body { width: 100%;  height: 100vh; }
   .carrier-route:hover { opacity: 1; }
   .distance-circle:hover { color: black; }
 
-  .leaflet-tooltip.distance-circle {
+  .leaflet-marker-icon.distance-marker {
+    border: none;
+    position: absolute;
+    left: -50%;
+    bottom: 0;
+  }
+  .leaflet-marker-icon .distance-marker-content {
+    position: relative;
+    left: -50%;
     font-size: smaller;
-    padding: 0 0.5em 0 0.5em;
+    padding: 0 6px;
     border-radius: 9px;
+    border: 1px dashed #333;
     background-color: palegoldenrod;
+    white-space: nowrap;
   }
 
-  .leaflet-tooltip.carrier-route {
+  .leaflet-tooltip.carrier-route, .leaflet-tooltip.distance-marker {
     border-radius: 12px;
     padding-left: 1em; padding-right: 1em;
-  }
+  } 

@@ -28,13 +28,21 @@
     <div id="map" class="map"></div>
 
     <script>
-    let locale = 'en-US';
+    const METERS_PER_MILE = 1609.34;
+    const RAD_PER_DEGREE = Math.PI / 180.0;
+    const LOCALE = 'en-US';
+
     let LMN = L.latLng(42.703772, -84.537131);
     let mapOptions = {
         zoomSnap: 0.5,
         center: LMN,
         zoom: 12
     };
+
+    // Shortcut function for formatting.
+    let toNum = function(num, options) {
+        return num.toLocaleString(LOCALE, options);
+    }
 
     // Create the map
     var map = L.map("map", mapOptions);
@@ -50,14 +58,14 @@
 
     // Histogram bins for grouping and summarizing
     let histogram = [
-        { minValue: 115000, color:'#800026', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 100000, color:'#BD0026', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 85000, color:'#E31A1C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 70000, color:'#FC4E2A', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 55000, color:'#FD8D3C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 40000, color:'#FEB24C', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 25000, color:'#FED976', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
-        { minValue: 0, color:'#FFEDA0', group: L.layerGroup(), residences: 0, businesses: 0, routes: 0 },
+        { minValue: 115000, color:'#800026', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 100000, color:'#BD0026', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 85000, color:'#E31A1C', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 70000, color:'#FC4E2A', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 55000, color:'#FD8D3C', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 40000, color:'#FEB24C', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 25000, color:'#FED976', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 0, color:'#FFEDA0', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
     ];
 
     function getColor(m) {
@@ -86,19 +94,6 @@
     //     attribution: osmAttribution
     // }).addTo(map);
 
-    // var CartoDB_PositronNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-	// attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-	// subdomains: 'abcd',
-	// maxZoom: 20
-    // }).addTo(map);
-
-    // var CartoDB_PositronOnlyLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-	// attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-	// subdomains: 'abcd',
-    // pane: 'labels',
-	// maxZoom: 20
-    // }).addTo(map);
-
     var CartoDB_VoyagerNoLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
@@ -123,26 +118,34 @@
     let lmnMarker = L.marker(LMN, { title: "LMN Headquarters" }).addTo(map);
 
     let circles = [
-        { miles: 20, color: '#afa5e8', minRadius: 9 },
-        { miles: 10, color: '#c0b5ff', minRadius: 10 },
-        { miles: 5, color: '#e9e6ff', minRadius: 10 },
-        { miles: 2, color: '#edc4ff', minRadius: 11 },
-        { miles: 1, color: '#e3a3ff', minRadius: 12 },
+        { radMiles: 20, color: '#afa5e8', minRadius: 9, stats: { residences: 0, businesses: 0, routes: 0 } },
+        { radMiles: 10, color: '#c0b5ff', minRadius: 10, stats: { residences: 0, businesses: 0, routes: 0 } },
+        { radMiles: 5, color: '#e9e6ff', minRadius: 10, stats: { residences: 0, businesses: 0, routes: 0 } },
+        { radMiles: 2, color: '#edc4ff', minRadius: 11, stats: { residences: 0, businesses: 0, routes: 0 } },
+        { radMiles: 1, color: '#e3a3ff', minRadius: 12, stats: { residences: 0, businesses: 0, routes: 0 } },
     ];
+
     let circleGroup = L.layerGroup();
     for (c of circles) {
-        let layer = L.tipCircle(LMN, c.miles * 1609, {
+        let layer = L.circle(LMN, c.radMiles * 1609, {
             containerName: 'distance-circles',
             className: 'distance-circle',
-            tipText: `${c.miles}-mile radius`,
             minZoom: c.minRadius,
-            color: '#333333',
-            //fillColor: c.color,
-            fillOpacity: 0, opacity: 0.5, stroke: true, width: 2, dashArray: "1 5"}
-        );
+            color: '#333333', fillOpacity: 0, opacity: 0.5, stroke: true, width: 2, dashArray: "1 5"
+        });
+        c.layer = layer;
+        layer.addTo(map);
+        c.icon = L.divIcon({
+            iconSize: null,
+            className: 'distance-marker',
+            minZoom: c.minRadius,
+            html: `<div class='distance-marker-content'>${c.radMiles} mile distance</div>`
+        });
+        let pos = [ layer.getBounds()._southWest.lat, layer.getLatLng().lng];
+        c.marker = L.marker(pos, { icon: c.icon }).addTo(map);
         circleGroup.addLayer(layer);
     }
-    circleGroup.addTo(map);
+    //circleGroup.addTo(map);
 
     let isochrones = [
         { minutes: 10, color: '#222266'},
@@ -178,7 +181,7 @@
     // Add layers control to select histogram bins
     let layerControl = L.control.layers(null, null, { collapsed: false, position: 'bottomright' });
     histogram.map(bin => {
-        layerControl.addOverlay(bin.group, `\$${bin.minValue.toLocaleString(locale)}`);
+        layerControl.addOverlay(bin.group, `\$${bin.minValue.toLocaleString(LOCALE)}`);
     });
     layerControl.addOverlay(isochronesGroup, 'Isochrones');
     layerControl.addTo(map);
@@ -201,11 +204,68 @@
         }
     }
 
+    // For a GeoJSON feature, find the nearest and furthest distances from
+    // the reference point. Uses an approximation valid for points close
+    // to the reference point. "Close" in this case means "not too far away".
+    // Returns { min: distMeters, max: distMeters }
+    function computeRouteDistances(feature, refPoint) {
+
+        // From https://stackoverflow.com/questions/43167417/calculate-distance-between-two-points-in-leaflet
+        // var deltaLat = lat2 - lat1;
+        // var deltaLon = lon2 - lon1;
+
+        // var a = Math.pow(Math.sin(deltaLat/2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLon/2), 2);
+        // var c = 2 * Math.asin(Math.sqrt(a));
+        // var EARTH_RADIUS = 6371;
+        // return c * EARTH_RADIUS
+
+        // For "close" points, cos(lat1) ~ cos(lat2)
+
+        creflat = Math.cos(refPoint.lat * RAD_PER_DEGREE);
+
+        
+        // Compute min and max ref point
+        let aMin = 1000000000.0, aMax = 0.0;
+
+        const EARTH_RADIUS = 6378100;
+        switch (feature.geometry.type) {
+            case "MultiLineString":
+                for (line of feature.geometry.coordinates) {
+                    for (point of line) {
+                        deltaLat = Math.abs(point[1] - refPoint.lat) * RAD_PER_DEGREE;
+                        deltaLon = Math.abs(point[0] - refPoint.lng) * RAD_PER_DEGREE;
+
+                        let a = Math.pow(Math.sin(deltaLat/2), 2)
+                              + creflat * Math.cos(point[1] * RAD_PER_DEGREE) * Math.pow(Math.sin(deltaLon/2), 2);
+
+                        if (a < aMin) aMin = a;
+                        if (a > aMax) aMax = a;
+                    }
+                }
+            break;
+        }
+
+        if (aMax== 0.0) {
+            // No points processed
+            return null;
+        }
+
+        let cMin = 2 * Math.asin(Math.sqrt(aMin));
+        let cMax = 2 * Math.asin(Math.sqrt(aMax));
+
+        return { minDist: cMin * EARTH_RADIUS, maxDist: cMax * EARTH_RADIUS };
+    }
+
     function processRoute(feature, layer) {
         let props = feature.properties;
         let m = props.MED_INCOME;
         
-        let tip = `<h3>${props.ZIP_CRID}</h3><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(locale)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(locale)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(locale)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
+        let d = computeRouteDistances(feature, LMN);
+        props.minDist = d.minDist;
+        props.maxDist = d.maxDist;
+
+        let format = { maximumFractionDigits: 1};
+        let tip = `<h3>${props.ZIP_CRID}</h3><p>${(props.minDist/METERS_PER_MILE).toLocaleString(LOCALE, format)}mi &ndash; ${(props.maxDist/METERS_PER_MILE).toLocaleString(LOCALE, format)}mi</p><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(LOCALE)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(LOCALE)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(LOCALE)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
 
         layer.options.containerName = "carrier-routes";
         layer.bindTooltip(tip, { className: 'carrier-route', permanent: false, sticky: true, direction: 'top', offset: L.point(0, -40) });
@@ -213,18 +273,28 @@
         // Add layers to group for histogram bin
         for (bin of histogram) {
             if (m >= bin.minValue) {
-                bin.residences += feature.properties.RES_CNT;
-                bin.businesses += feature.properties.BUS_CNT;
-                bin.routes += 1;
+                bin.stats.residences += feature.properties.RES_CNT;
+                bin.stats.businesses += feature.properties.BUS_CNT;
+                bin.stats.routes += 1;
                 bin.group.addLayer(layer);
                 break;
+            }
+        }
+
+        // Accumulate statistics for distance circles
+        for (circ of circles) {
+            if (d.minDist < circ.radMiles * METERS_PER_MILE) {
+                let stats = circ.stats;
+                stats.residences += feature.properties.RES_CNT;
+                stats.businesses += feature.properties.BUS_CNT;
+                stats.routes += 1;
             }
         }
 
         layer.on('click', featureClick);
     };
 
-    function processRouteBackground(feature, layer) {
+    function processRouteBackground(feature, layer) {  
         layer.addTo(map);
     }
 
@@ -260,7 +330,8 @@
             let markup = "<h4>Legend</h4>";
             markup += "<table><tr><th>Income</th><th align='right'>Res.</th><th align='right'>Bus.</th><th align='right'>Routes</tr>";
             for (bin of histogram) {
-                markup += `<tr><td align='right'><i style="background: ${bin.color}"></i><span>\$${bin.minValue.toLocaleString(locale)}+</td><td align='right'>${bin.residences.toLocaleString(locale)}</td><td align='right'>${bin.businesses.toLocaleString(locale)}</td><td align='right'>${bin.routes}</td></tr>`;
+                stats = bin.stats;
+                markup += `<tr><td align='right'><i style="background: ${bin.color}"></i><span>\$${bin.minValue.toLocaleString(LOCALE)}+</td><td align='right'>${stats.residences.toLocaleString(LOCALE)}</td><td align='right'>${stats.businesses.toLocaleString(LOCALE)}</td><td align='right'>${stats.routes}</td></tr>`;
             }
             markup += "</table>";
 
@@ -269,6 +340,18 @@
         };
 
         legend.addTo(map);
+
+        // Add legend popups to circles
+        for (circ of circles) {
+            let markup = `<h4>${circ.radMiles}-mile Distance</h4>`;
+            let stats = circ.stats;
+            markup += `<table><tr><th>Residences</th><td align='right'>${toNum(stats.residences)}</td></tr>`;
+            markup += `<tr><th>Businesses</th><td align='right'>${toNum(stats.businesses)}</td></tr>`;
+            markup += `<tr><th>Routes</th><td align='right'>${toNum(stats.routes)}</td></tr>`;
+            markup += "</table>";
+
+            circ.marker.bindPopup(markup, { direction: 'top'});
+        }
     });
 
     </script>
