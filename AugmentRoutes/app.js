@@ -1,24 +1,28 @@
 
-import zips from '../zips-short.json' assert { type: 'json' };
+import zips from '../zips.json' assert { type: 'json' };
 import fs from 'fs';
+import jq from 'node-jq';
 
 const METERS_PER_MILE = 1609.34;
 const RAD_PER_DEGREE = Math.PI / 180.0;
 const LMN = [-84.537131, 42.703772];
 
 
-// For a GeoJSON feature, find the nearest and furthest distances from
-// the reference point.
+// For a feature, find the nearest and furthest distances from the reference point.
+// Note this isn't a GeoJSON feature, it's an esriGeometryPolyline, which has
+// .geometry.paths instead of .geometry.coordinates, using the same format as a
+// GeoJSON MultiLineString.
 // Returns { min: distMeters, max: distMeters }
 let computeRouteDistances = function(feature, [refLon, refLat]) {
 
-    // From https://stackoverflow.com/questions/43167417/calculate-distance-between-two-points-in-leaflet
-    let cosRefLat = Math.cos(refLat * RAD_PER_DEGREE);
-    
     // Compute min and max ref point
     let aMin = 1000000000.0, aMax = 0.0;
 
     const EARTH_RADIUS = 6378100;
+
+    // From https://stackoverflow.com/questions/43167417/calculate-distance-between-two-points-in-leaflet
+    let cosRefLat = Math.cos(refLat * RAD_PER_DEGREE);
+    
     for (let line of feature.geometry.paths) {
         for (let [lon, lat] of line) {
             let deltaLat = Math.abs(lat - refLat) * RAD_PER_DEGREE;
@@ -55,12 +59,18 @@ let augment = function (data) {
     return data;
 }
 
+// Load jq scripts synchronously
+let usps2geojson = fs.readFileSync('../usps2geojson.jq', { encoding: 'utf-8'}).replace(/(\r\n|\n|\r)/gm, "");
+let usps2stats = fs.readFileSync('../usps2stats.jq', { encoding: 'utf-8'}).replace(/(\r\n|\n|\r)/gm, "");
+
 // Holds outstanding requests
 let requests = [];
 
 for (let zip of zips) {
     let uspsUrl = `https://gis.usps.com/arcgis/rest/services/EDDM/selectZIP/GPServer/routes/execute?f=json&env%3AoutSR=4326&ZIP=${zip}&Rte_Box=R&UserName=EDDM`
     let outPath = `../Data/data-${zip}.json`;
+    let geojsonPath = `../Data/routes-${zip}.geojson`;
+    let statsPath = `../Data/stats-${zip}.json`;
 
     console.log(`Fetching route data for ${zip}...`);
     requests.push(fetch(uspsUrl)
@@ -81,12 +91,21 @@ for (let zip of zips) {
             // Process features
             augment(results[0].value);
 
-            // Write to file
-            return fs.promises.writeFile(outPath, JSON.stringify(data), { encoding: 'utf-8' });
-        })
-        .then(() => {
-            console.log(`Wrote ${outPath}`);
-            return;
+            // Write augmented route file
+            let p1 = fs.promises.writeFile(outPath, JSON.stringify(data), { encoding: 'utf-8' })
+                .then(() => { console.log(`Wrote ${outPath}`); });
+            
+            // Transform with jq to geojson file
+            let p2 = jq.run(usps2geojson, data, { input: 'json', output: 'json' })
+                .then(geojson => fs.promises.writeFile(geojsonPath, JSON.stringify(geojson), { encoding: 'utf-8' }))
+                .then(() => { console.log(`Wrote ${geojsonPath}`); });
+
+            // Transform with jq to stats file
+            let p3 = jq.run(usps2stats, data, { input: 'json', output: 'json' })
+                .then(stats => fs.promises.writeFile(statsPath, JSON.stringify(stats), { encoding: 'utf-8' }))
+                .then(() => { console.log(`Wrote ${statsPath}`); });
+
+            return Promise.all([p1, p2, p3]);
         })
     );
 }
