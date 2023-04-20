@@ -1,0 +1,15 @@
+{
+  "name": "fetch-usps-routes",
+  "version": "1.0.0",
+  "description": "Fetches USPS route data for ZIP codes listed in zips.json. Adds closest and furthest distance to routes files, and transforms to geojson",
+  "main": "fetch.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-jq": "^2.3.5"
+  }
+}

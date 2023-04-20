@@ -1,3 +1,8 @@
+/**
+ * For each ZIP code in zips.json, fetch route data from gis.usps.com, augment the routes
+ * with the minimum and maximum distance from the reference point, save the data file,
+ * transform via jq to geojson file, and transform via jq to statistics file.
+ */
 
 import zips from '../zips.json' assert { type: 'json' };
 import fs from 'fs';
@@ -73,7 +78,7 @@ for (let zip of zips) {
     let statsPath = `../Data/stats-${zip}.json`;
 
     console.log(`Fetching route data for ${zip}...`);
-    requests.push(fetch(uspsUrl)
+    fetch(uspsUrl)
         .then(response => {
             console.log(`Received route data for ${zip}`);
             if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText} fetching ${uspsUrl}`);
@@ -92,28 +97,27 @@ for (let zip of zips) {
             augment(results[0].value);
 
             // Write augmented route file
-            let p1 = fs.promises.writeFile(outPath, JSON.stringify(data), { encoding: 'utf-8' })
+            let prom1 = fs.promises.writeFile(outPath, JSON.stringify(data), { encoding: 'utf-8' })
                 .then(() => { console.log(`Wrote ${outPath}`); });
             
             // Transform with jq to geojson file
-            let p2 = jq.run(usps2geojson, data, { input: 'json', output: 'json' })
+            let prom2 = jq.run(usps2geojson, data, { input: 'json', output: 'json' })
                 .then(geojson => fs.promises.writeFile(geojsonPath, JSON.stringify(geojson), { encoding: 'utf-8' }))
                 .then(() => { console.log(`Wrote ${geojsonPath}`); });
 
             // Transform with jq to stats file
-            let p3 = jq.run(usps2stats, data, { input: 'json', output: 'json' })
+            let prom3 = jq.run(usps2stats, data, { input: 'json', output: 'json' })
                 .then(stats => fs.promises.writeFile(statsPath, JSON.stringify(stats), { encoding: 'utf-8' }))
                 .then(() => { console.log(`Wrote ${statsPath}`); });
 
-            return Promise.all([p1, p2, p3]);
-        })
-    );
+            //return Promise.all([prom1, prom2, prom3]);
+        });
 }
 
 // Wait for all results
 console.log('waiting...');
-await Promise.all(requests);
-console.log('done.');
+//await Promise.all(requests);
+//console.log('done.');
 
 
 

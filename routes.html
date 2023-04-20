@@ -58,14 +58,14 @@
 
     // Histogram bins for grouping and summarizing
     let histogram = [
-        { minValue: 115000, color:'#800026', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
-        { minValue: 100000, color:'#BD0026', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
-        { minValue: 85000, color:'#E31A1C', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
-        { minValue: 70000, color:'#FC4E2A', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
-        { minValue: 55000, color:'#FD8D3C', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
-        { minValue: 40000, color:'#FEB24C', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
-        { minValue: 25000, color:'#FED976', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
-        { minValue: 0, color:'#FFEDA0', group: L.layerGroup(), stats: { residences: 0, businesses: 0, routes: 0 }},
+        { minValue: 115000, color:'#800026', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
+        { minValue: 100000, color:'#BD0026', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
+        { minValue: 85000, color:'#E31A1C', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
+        { minValue: 70000, color:'#FC4E2A', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
+        { minValue: 55000, color:'#FD8D3C', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
+        { minValue: 40000, color:'#FEB24C', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
+        { minValue: 25000, color:'#FED976', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
+        { minValue: 0, color:'#FFEDA0', group: L.layerGroup(), stats: { res: 0, bus: 0, routes: 0 }},
     ];
 
     function getColor(m) {
@@ -118,11 +118,11 @@
     let lmnMarker = L.marker(LMN, { title: "LMN Headquarters" }).addTo(map);
 
     let circles = [
-        { radMiles: 20, color: '#afa5e8', minRadius: 9, stats: { residences: 0, businesses: 0, routes: 0 } },
-        { radMiles: 10, color: '#c0b5ff', minRadius: 10, stats: { residences: 0, businesses: 0, routes: 0 } },
-        { radMiles: 5, color: '#e9e6ff', minRadius: 10, stats: { residences: 0, businesses: 0, routes: 0 } },
-        { radMiles: 2, color: '#edc4ff', minRadius: 11, stats: { residences: 0, businesses: 0, routes: 0 } },
-        { radMiles: 1, color: '#e3a3ff', minRadius: 12, stats: { residences: 0, businesses: 0, routes: 0 } },
+        { radMiles: 20, color: '#afa5e8', minRadius: 9, stats: { res: 0, bus: 0, routes: 0 } },
+        { radMiles: 10, color: '#c0b5ff', minRadius: 10, stats: { res: 0, bus: 0, routes: 0 } },
+        { radMiles: 5, color: '#e9e6ff', minRadius: 10, stats: { res: 0, bus: 0, routes: 0 } },
+        { radMiles: 2, color: '#edc4ff', minRadius: 11, stats: { res: 0, bus: 0, routes: 0 } },
+        { radMiles: 1, color: '#e3a3ff', minRadius: 12, stats: { res: 0, bus: 0, routes: 0 } },
     ];
 
     let circleGroup = L.layerGroup();
@@ -204,68 +204,12 @@
         }
     }
 
-    // For a GeoJSON feature, find the nearest and furthest distances from
-    // the reference point. Uses an approximation valid for points close
-    // to the reference point. "Close" in this case means "not too far away".
-    // Returns { min: distMeters, max: distMeters }
-    function computeRouteDistances(feature, refPoint) {
-
-        // From https://stackoverflow.com/questions/43167417/calculate-distance-between-two-points-in-leaflet
-        // var deltaLat = lat2 - lat1;
-        // var deltaLon = lon2 - lon1;
-
-        // var a = Math.pow(Math.sin(deltaLat/2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(deltaLon/2), 2);
-        // var c = 2 * Math.asin(Math.sqrt(a));
-        // var EARTH_RADIUS = 6371;
-        // return c * EARTH_RADIUS
-
-        // For "close" points, cos(lat1) ~ cos(lat2)
-
-        creflat = Math.cos(refPoint.lat * RAD_PER_DEGREE);
-
-        
-        // Compute min and max ref point
-        let aMin = 1000000000.0, aMax = 0.0;
-
-        const EARTH_RADIUS = 6378100;
-        switch (feature.geometry.type) {
-            case "MultiLineString":
-                for (line of feature.geometry.coordinates) {
-                    for (point of line) {
-                        deltaLat = Math.abs(point[1] - refPoint.lat) * RAD_PER_DEGREE;
-                        deltaLon = Math.abs(point[0] - refPoint.lng) * RAD_PER_DEGREE;
-
-                        let a = Math.pow(Math.sin(deltaLat/2), 2)
-                              + creflat * Math.cos(point[1] * RAD_PER_DEGREE) * Math.pow(Math.sin(deltaLon/2), 2);
-
-                        if (a < aMin) aMin = a;
-                        if (a > aMax) aMax = a;
-                    }
-                }
-            break;
-        }
-
-        if (aMax== 0.0) {
-            // No points processed
-            return null;
-        }
-
-        let cMin = 2 * Math.asin(Math.sqrt(aMin));
-        let cMax = 2 * Math.asin(Math.sqrt(aMax));
-
-        return { minDist: cMin * EARTH_RADIUS, maxDist: cMax * EARTH_RADIUS };
-    }
-
     function processRoute(feature, layer) {
         let props = feature.properties;
         let m = props.MED_INCOME;
         
-        let d = computeRouteDistances(feature, LMN);
-        props.minDist = d.minDist;
-        props.maxDist = d.maxDist;
-
         let format = { maximumFractionDigits: 1};
-        let tip = `<h3>${props.ZIP_CRID}</h3><p>${(props.minDist/METERS_PER_MILE).toLocaleString(LOCALE, format)}mi &ndash; ${(props.maxDist/METERS_PER_MILE).toLocaleString(LOCALE, format)}mi</p><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(LOCALE)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(LOCALE)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(LOCALE)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
+        let tip = `<h3>${props.ZIP_CRID}</h3><p>${(props.minDistMiles).toLocaleString(LOCALE, format)}mi &ndash; ${(props.maxDistMiles).toLocaleString(LOCALE, format)}mi</p><table><tr><th>Med. Income</th><td align='right'>\$${props.MED_INCOME.toLocaleString(LOCALE)}<tr><th>Residences</th><td align='right'>${props.RES_CNT.toLocaleString(LOCALE)}</td></tr><tr><th>Businesses</th><td align='right'>${props.BUS_CNT.toLocaleString(LOCALE)}</td></tr><tr><th>Facility</th><td align='right'>${props.FACILITY_NAME}<tr></table>`;
 
         layer.options.containerName = "carrier-routes";
         layer.bindTooltip(tip, { className: 'carrier-route', permanent: false, sticky: true, direction: 'top', offset: L.point(0, -40) });
@@ -273,8 +217,8 @@
         // Add layers to group for histogram bin
         for (bin of histogram) {
             if (m >= bin.minValue) {
-                bin.stats.residences += feature.properties.RES_CNT;
-                bin.stats.businesses += feature.properties.BUS_CNT;
+                bin.stats.res += feature.properties.RES_CNT;
+                bin.stats.bus += feature.properties.BUS_CNT;
                 bin.stats.routes += 1;
                 bin.group.addLayer(layer);
                 break;
@@ -283,10 +227,10 @@
 
         // Accumulate statistics for distance circles
         for (circ of circles) {
-            if (d.minDist < circ.radMiles * METERS_PER_MILE) {
+            if (props.minDistMeters < circ.radMiles * METERS_PER_MILE) {
                 let stats = circ.stats;
-                stats.residences += feature.properties.RES_CNT;
-                stats.businesses += feature.properties.BUS_CNT;
+                stats.res += feature.properties.RES_CNT;
+                stats.bus += feature.properties.BUS_CNT;
                 stats.routes += 1;
             }
         }
@@ -298,62 +242,69 @@
         layer.addTo(map);
     }
 
+    // Get ZIP codes of interest
+    fetch("/zips.json")
+    .then(response => response.json())
+    .then(zips => {
+        zips.forEach (zip => {
+            // Fetch route for zip
+            url = `/data/routes-${zip}.geojson`;
+            requests.push(
+                fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJSON(data, { style: styleRoute, onEachFeature: processRoute });
+                })
+                .catch((error) => {
+                    console.error(`There was a problem fetching or processing map data for ${url} : `, error);
+                })
+            );
+        });
 
-    let zips = [ 48910, 48911, 48933, 48912, 48915, 48842, 48917, 48823, 48906, 48864, 48821, 48840, 48854, 48808, 48820, 48876, 48837, 48895, 48848, 48822, 48827, 48819, 49251, 48872, 48813, 49264, 48892, 48894, 48879, 48875 ];
-
-    zips.forEach ((zip) => {
-        url = `/data/routes-${zip}.geojson`;
-
-        requests.push(
-            fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                L.geoJSON(data, { style: styleRoute, onEachFeature: processRoute });
-            })
-            .catch((error) => {
-                console.error(`There was a problem fetching or processing map data for ${url} : `, error);
-            }));
-    });
-
-    // Add histgram layer groups to map
-    for (bin of histogram) {
-        bin.group.addTo(map);
-    }
-
-    // When all features processed, build a legend
-    Promise.all(requests).then(function () {
-        // Create legend
-        var legend = L.control({ position: "bottomleft" });
-
-        legend.onAdd = function(map) {
-            var div = L.DomUtil.create("div", "legend leaflet-control");
-            let markup = "<h4>Legend</h4>";
-            markup += "<table><tr><th>Income</th><th align='right'>Res.</th><th align='right'>Bus.</th><th align='right'>Routes</tr>";
-            for (bin of histogram) {
-                stats = bin.stats;
-                markup += `<tr><td align='right'><i style="background: ${bin.color}"></i><span>\$${bin.minValue.toLocaleString(LOCALE)}+</td><td align='right'>${stats.residences.toLocaleString(LOCALE)}</td><td align='right'>${stats.businesses.toLocaleString(LOCALE)}</td><td align='right'>${stats.routes}</td></tr>`;
-            }
-            markup += "</table>";
-
-            div.innerHTML += markup;
-            return div;
-        };
-
-        legend.addTo(map);
-
-        // Add legend popups to circles
-        for (circ of circles) {
-            let markup = `<h4>${circ.radMiles}-mile Distance</h4>`;
-            let stats = circ.stats;
-            markup += `<table><tr><th>Residences</th><td align='right'>${toNum(stats.residences)}</td></tr>`;
-            markup += `<tr><th>Businesses</th><td align='right'>${toNum(stats.businesses)}</td></tr>`;
-            markup += `<tr><th>Routes</th><td align='right'>${toNum(stats.routes)}</td></tr>`;
-            markup += "</table>";
-
-            circ.marker.bindPopup(markup, { direction: 'top'});
+        // Add histgram layer groups to map
+        for (bin of histogram) {
+            bin.group.addTo(map);
         }
-    });
 
+        // When all features processed, build a legend
+        Promise.all(requests).then(function () {
+            // Create legend
+            var legend = L.control({ position: "bottomleft" });
+
+            legend.onAdd = function(map) {
+                var div = L.DomUtil.create("div", "legend leaflet-control");
+                let markup = "<h4>Legend</h4>";
+                let totals = { res: 0, bus: 0, routes: 0 };
+                markup += "<table><tr><th>Income</th><th align='right'>Res.</th><th align='right'>Bus.</th><th align='right'>Routes</tr>";
+                for (bin of histogram) {
+                    stats = bin.stats;
+                    totals.res += stats.res;
+                    totals.bus += stats.bus;
+                    totals.routes += stats.routes;
+                    markup += `<tr><td align='right'><i style="background: ${bin.color}"></i><span>\$${bin.minValue.toLocaleString(LOCALE)}+</td><td align='right'>${stats.res.toLocaleString(LOCALE)}</td><td align='right'>${stats.bus.toLocaleString(LOCALE)}</td><td align='right'>${stats.routes}</td></tr>`;
+                }
+                markup += `<tr><td align='right'><strong>Total</strong></td><td algin='right'>${totals.res.toLocaleString(LOCALE)}</td><td align='right'>${totals.bus.toLocaleString(LOCALE)}</td><td align='right'>${totals.routes.toLocaleString(LOCALE)}</td></tr>`;
+                markup += "</table>";
+
+                div.innerHTML += markup;
+                return div;
+            };
+
+            legend.addTo(map);
+
+            // Add legend popups to circles
+            for (circ of circles) {
+                let markup = `<h4>Within ${circ.radMiles} Miles</h4>`;
+                let stats = circ.stats;
+                markup += `<table><tr><th>Residences</th><td align='right'>${toNum(stats.res)}</td></tr>`;
+                markup += `<tr><th>Businesses</th><td align='right'>${toNum(stats.bus)}</td></tr>`;
+                markup += `<tr><th>Routes</th><td align='right'>${toNum(stats.routes)}</td></tr>`;
+                markup += "</table>";
+
+                circ.marker.bindPopup(markup, { direction: 'top'});
+            }
+        })
+    })
     </script>
 
 </body>
