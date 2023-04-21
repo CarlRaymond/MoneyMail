@@ -33,10 +33,13 @@ body { width: 100%;  height: 100vh; }
   }
 
   .carrier-route, .carrier-routes { transition: opacity 1s; }
-  
+
+  .carrier-route { opacity: 0.5; }
+
   .carrier-routes:has(:hover) .carrier-route { opacity: 0.1; }
   .carrier-routes:has(:hover) .carrier-route:hover { opacity: 1; }
-  .carrier-route { opacity: 0.5; }
+  .carrier-routes:has(:hover) .carrier-route.selected { opacity: 1; }
+  .carrier-route.selected { opacity: 1; stroke: blue;}
   .carrier-route:hover { opacity: 1; }
   .distance-circle:hover { color: black; }
 

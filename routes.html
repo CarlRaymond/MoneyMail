@@ -53,6 +53,9 @@
 
     map.createPane('underlay').style.zIndex=390;
 
+    // Holds all layers
+    let allRoutes = L.layerGroup();
+
     // Tracks data loading requests
     let requests = [];
 
@@ -74,15 +77,10 @@
         }
     }
 
-    let selectedFeature = null;
-
     let featureClick = function(e) {
-        if (selectedFeature) {
-            L.geoJSON().resetStyle(selectedFeature);
-        }
-        selectedFeature = e.target;
-        selectedFeature.bringToFront();
-        selectedFeature.setStyle({ className: 'carrier-route-selected', color: 'blue'});
+
+        let elem = e.target.getElement();
+        elem.classList.toggle("selected");
     }
 
     // Add layers
@@ -242,6 +240,12 @@
         layer.addTo(map);
     }
 
+    function selectByDistance(miles) {
+        allRoutes.eachLayer(function(l) {
+            l.getElement().classList.toggle("selected", r.properties.minDistMiles < miles);
+        });
+    }
+
     // Get ZIP codes of interest
     fetch("/zips.json")
     .then(response => response.json())
@@ -252,8 +256,11 @@
             requests.push(
                 fetch(url)
                 .then(response => response.json())
-                .then(data => {
-                    L.geoJSON(data, { style: styleRoute, onEachFeature: processRoute });
+                .then(routes => {
+                    for (route of routes.features) {
+                        let l = L.geoJSON(route, { style: styleRoute, onEachFeature: processRoute });
+                        allRoutes.addLayer(l);
+                    }
                 })
                 .catch((error) => {
                     console.error(`There was a problem fetching or processing map data for ${url} : `, error);
@@ -262,9 +269,10 @@
         });
 
         // Add histgram layer groups to map
-        for (bin of histogram) {
-            bin.group.addTo(map);
-        }
+        // for (bin of histogram) {
+        //     bin.group.addTo(map);
+        // }
+        allRoutes.addTo(map);
 
         // When all features processed, build a legend
         Promise.all(requests).then(function () {
@@ -300,6 +308,8 @@
                 markup += `<tr><th>Businesses</th><td align='right'>${toNum(stats.bus)}</td></tr>`;
                 markup += `<tr><th>Routes</th><td align='right'>${toNum(stats.routes)}</td></tr>`;
                 markup += "</table>";
+
+                markup += `<a href='#' onClick='selectByDistance(${circ.radMiles})'>Select all</a>`;
 
                 circ.marker.bindPopup(markup, { direction: 'top'});
             }
